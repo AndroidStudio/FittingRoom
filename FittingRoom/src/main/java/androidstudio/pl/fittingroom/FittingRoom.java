@@ -1,6 +1,9 @@
 package androidstudio.pl.fittingroom;
 
 import android.app.Activity;
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
@@ -9,18 +12,16 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 
-import java.sql.SQLException;
-
 public class FittingRoom extends Activity {
     private final static String LOG_TAG = "FittingRoom";
-    private Database mDatabase;
-    private ProgressBar progressbar;
+    public Database mDatabase;
+    public ProgressBar progressBar;
     private DownloadSettingsTask downloadSettingsTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(LOG_TAG, "onCreate");
+        Log.w(LOG_TAG, "onCreate");
 
         final DisplayMetrics displayMetrics = new DisplayMetrics();
         this.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
@@ -34,12 +35,12 @@ public class FittingRoom extends Activity {
         final RelativeLayout.LayoutParams layoutParamsProgressBar = new RelativeLayout.LayoutParams(progresBarSize, progresBarSize);
         layoutParamsProgressBar.addRule(RelativeLayout.CENTER_IN_PARENT);
 
-        progressbar = new ProgressBar(this);
-        progressbar.setVisibility(View.INVISIBLE);
+        progressBar = new ProgressBar(this);
+        progressBar.setVisibility(View.INVISIBLE);
 
         mDatabase = new Database(this);
 
-        mainLayout.addView(progressbar, layoutParamsProgressBar);
+        mainLayout.addView(progressBar, layoutParamsProgressBar);
         this.setContentView(mainLayout);
     }
 
@@ -52,33 +53,28 @@ public class FittingRoom extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(LOG_TAG, "onResume");
+        Log.w(LOG_TAG, "onResume");
         if (downloadSettingsTask != null) {
             AsyncTask.Status diStatus = downloadSettingsTask.getStatus();
             if (diStatus != AsyncTask.Status.FINISHED) {
                 return;
             }
         }
-
-        if (mDatabase != null) {
-            try {
-                mDatabase.openToWrite();
-            } catch (SQLException e) {
-                Log.e(LOG_TAG, "Field openToWrite() " + e);
-            }
-        }
+        final String settingsUrl = "";
+        downloadSettingsTask = new DownloadSettingsTask(this);
+        downloadSettingsTask.execute(settingsUrl);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        Log.d(LOG_TAG, "onPause");
-        if (mDatabase != null) {
-            try {
-                mDatabase.close();
-            } catch (Exception e) {
-                Log.e(LOG_TAG, "Field closeDatabase() " + e);
-            }
-        }
+        Log.w(LOG_TAG, "onPause");
+        downloadSettingsTask.cancel(true);
+    }
+
+    public boolean internetIsAvailable() {
+        final ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        final NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnected();
     }
 }

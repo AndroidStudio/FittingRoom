@@ -92,7 +92,6 @@ public class Database {
         sqlLiteHelper.close();
     }
 
-
     private class SQLiteHelper extends SQLiteOpenHelper {
         public SQLiteHelper(Context context, String databasename, SQLiteDatabase.CursorFactory factory, int databaseversion) {
             super(context, databasename, factory, databaseversion);
