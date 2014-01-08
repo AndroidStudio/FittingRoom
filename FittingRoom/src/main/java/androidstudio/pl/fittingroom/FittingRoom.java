@@ -17,6 +17,7 @@ import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
+import android.widget.GridView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 
@@ -24,10 +25,12 @@ import java.sql.SQLException;
 
 public class FittingRoom extends Activity {
     private final static String LOG_TAG = "FittingRoom";
-    private DownloadSettingsTask downloadSettingsTask;
     private RelativeLayout mainLayout;
+    private GridView gridView;
+    public DownloadSettingsTask downloadSettingsTask;
     public Database mDatabase;
     public ProgressBar progressBar;
+    public GridViewCustomAdapter gridViewAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,11 +48,19 @@ public class FittingRoom extends Activity {
         final RelativeLayout.LayoutParams layoutParamsProgressBar = new RelativeLayout.LayoutParams(progresBarSize, progresBarSize);
         layoutParamsProgressBar.addRule(RelativeLayout.CENTER_IN_PARENT);
 
+        gridView = new GridView(this);
+
         progressBar = new ProgressBar(this);
         progressBar.setVisibility(View.INVISIBLE);
 
-        mDatabase = new Database(this);
+        try {
+            mDatabase = new Database(this);
+            mDatabase.openToWrite();
+        } catch (SQLException e) {
+            Log.w(LOG_TAG, "openToWrite " + e);
+        }
 
+        mainLayout.addView(gridView);
         mainLayout.addView(progressBar, layoutParamsProgressBar);
         this.setContentView(mainLayout);
     }
@@ -82,6 +93,14 @@ public class FittingRoom extends Activity {
         downloadSettingsTask.cancel(true);
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.w(LOG_TAG, "onDestroy");
+        downloadSettingsTask.close();
+    }
+
+
     public boolean internetIsAvailable() {
         final ConnectivityManager connectivityManager = (ConnectivityManager)
                 getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -97,7 +116,6 @@ public class FittingRoom extends Activity {
     public void updateContentView() {
         Cursor cursor = null;
         try {
-            mDatabase.openToWrite();
             cursor = mDatabase.getBackGroudImageSettings();
             if (cursor.moveToFirst()) {
                 final String mode = cursor.getString(0);
@@ -114,11 +132,13 @@ public class FittingRoom extends Activity {
                     mainLayout.setBackgroundDrawable(drawable);
                 }
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             Log.w(LOG_TAG, "Error updateContentView " + e);
         } finally {
             if (cursor != null) cursor.close();
-            mDatabase.close();
         }
+
+        gridViewAdapter = new GridViewCustomAdapter(this);
+        gridView.setAdapter(gridViewAdapter);
     }
 }

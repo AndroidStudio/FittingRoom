@@ -10,7 +10,7 @@ import java.sql.SQLException;
 
 public class Database {
     private static final String DATABASENAME = "FITTINGROOM";
-    private static final int DATABASEVERSION = 1;
+    private static final int DATABASEVERSION = 4;
     private final Context context;
 
     private SQLiteHelper sqLiteHelper;
@@ -18,7 +18,7 @@ public class Database {
 
     private static final String KEY_VERSION = "version";
     private static final String KEY_VERSION_ID = "id";
-    private static final String KEY_VERSION_VALUE = "file_url";
+    private static final String KEY_VERSION_VALUE = "value";
     private static final String SCRIPT_CREATE_KEY_VERSION = "create table "
             + KEY_VERSION + " ("
             + KEY_VERSION_ID + " integer primary key autoincrement, "
@@ -53,6 +53,7 @@ public class Database {
     private static final String KEY_ICONIMAGESETTINGS_IMAGE = "image";
     private static final String KEY_ICONIMAGESETTINGS_COLUMNS = "columns";
     private static final String KEY_ICONIMAGESETTINGS_ROWS = "rows";
+    private static final String KEY_ICONIMAGESETTINGS_SPACING = "spacing";
     private static final String KEY_ICONIMAGESETTINGS_FADEOUT_TIME = "fadeout_time";
     private static final String KEY_ICONIMAGESETTINGS_FLASH_TIME = "flash_time";
     private static final String SCRIPT_CREATE_KEY_ICONIMAGESETTINGS = "create table "
@@ -61,6 +62,7 @@ public class Database {
             + KEY_ICONIMAGESETTINGS_IMAGE + " blob not null,"
             + KEY_ICONIMAGESETTINGS_COLUMNS + " integer not null,"
             + KEY_ICONIMAGESETTINGS_ROWS + " integer not null,"
+            + KEY_ICONIMAGESETTINGS_SPACING + " integer not null,"
             + KEY_ICONIMAGESETTINGS_FADEOUT_TIME + " integer not null,"
             + KEY_ICONIMAGESETTINGS_FLASH_TIME + " integer not null);";
 
@@ -111,11 +113,11 @@ public class Database {
 
         @Override
         public void onUpgrade(SQLiteDatabase db, int i, int i2) {
-            db.execSQL("DROP TABLE IF EXISTS " + SCRIPT_CREATE_KEY_VERSION);
-            db.execSQL("DROP TABLE IF EXISTS " + SCRIPT_CREATE_IDLEIMAGESETTINGS);
-            db.execSQL("DROP TABLE IF EXISTS " + SCRIPT_CREATE_KEY_ALLERTFILESETTINGS);
-            db.execSQL("DROP TABLE IF EXISTS " + SCRIPT_CREATE_KEY_ICONIMAGESETTINGS);
-            db.execSQL("DROP TABLE IF EXISTS " + SCRIPT_CREATE_KEY_BACKGROUNDIMAGESETTINGS);
+            db.execSQL("DROP TABLE IF EXISTS " + KEY_VERSION);
+            db.execSQL("DROP TABLE IF EXISTS " + KEY_IDLEIMAGESETTINGS);
+            db.execSQL("DROP TABLE IF EXISTS " + KEY_ALLERTFILESETTINGS);
+            db.execSQL("DROP TABLE IF EXISTS " + KEY_ICONIMAGESETTINGS);
+            db.execSQL("DROP TABLE IF EXISTS " + KEY_BACKGROUNDIMAGESETTINGS);
             onCreate(db);
         }
     }
@@ -147,6 +149,40 @@ public class Database {
                 KEY_BACKGROUNDIMAGESETTINGS_MODE, KEY_BACKGROUNDIMAGESETTINGS_IMAGE,
                 KEY_BACKGROUNDIMAGESETTINGS_RED, KEY_BACKGROUNDIMAGESETTINGS_GREEN,
                 KEY_BACKGROUNDIMAGESETTINGS_BLUE}, null, null, null, null, null);
+    }
+
+    public void insertIdleImageSettings(byte[] idleImageBytes, int idleImageWidth, int idleImageHeigh, int idleImageUpdateRate, String showIdleImage) {
+        sqLiteDatabase.delete(KEY_IDLEIMAGESETTINGS, null, null);
+        final ContentValues values = new ContentValues();
+        values.put(KEY_IDLEIMAGESETTINGS_IMAGE, idleImageBytes);
+        values.put(KEY_IDLEIMAGESETTINGS_IMAGE_WIDTH, idleImageWidth);
+        values.put(KEY_IDLEIMAGESETTINGS_IMAGE_HEIGHT, idleImageHeigh);
+        values.put(KEY_IDLEIMAGESETTINGS_IMAGE_UPDATE_RATE, idleImageUpdateRate);
+        values.put(KEY_IDLEIMAGESETTINGS_SHOW_IDLE_IMAGE, showIdleImage);
+        sqLiteDatabase.insert(KEY_IDLEIMAGESETTINGS, null, values);
+    }
+
+    public void insertIconImageSettings(byte[] iconImageBytes, int iconColumns, int iconRows, int iconSpacing, int iconFadeoutTime, int iconFlashTime) {
+        sqLiteDatabase.delete(KEY_ICONIMAGESETTINGS, null, null);
+        final ContentValues values = new ContentValues();
+        values.put(KEY_ICONIMAGESETTINGS_IMAGE, iconImageBytes);
+        values.put(KEY_ICONIMAGESETTINGS_COLUMNS, iconColumns);
+        values.put(KEY_ICONIMAGESETTINGS_ROWS, iconRows);
+        values.put(KEY_ICONIMAGESETTINGS_SPACING, iconSpacing);
+        values.put(KEY_ICONIMAGESETTINGS_FADEOUT_TIME, iconFadeoutTime);
+        values.put(KEY_ICONIMAGESETTINGS_FLASH_TIME, iconFlashTime);
+        sqLiteDatabase.insert(KEY_ICONIMAGESETTINGS, null, values);
+    }
+
+    public void insertAlertFileUrl(String alertFile) {
+        sqLiteDatabase.delete(KEY_ALLERTFILESETTINGS, null, null);
+        final ContentValues values = new ContentValues();
+        values.put(KEY_ALLERTFILESETTINGS_URL, alertFile);
+        sqLiteDatabase.insert(KEY_ALLERTFILESETTINGS, null, values);
+    }
+
+    public Cursor getAlertUrl() {
+        return sqLiteDatabase.query(KEY_ALLERTFILESETTINGS, new String[]{KEY_ALLERTFILESETTINGS_URL}, null, null, null, null, null);
     }
 
 }
