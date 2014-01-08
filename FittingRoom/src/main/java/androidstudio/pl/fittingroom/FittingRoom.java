@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.StateListDrawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
@@ -21,12 +22,11 @@ import android.widget.GridView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 
-import java.sql.SQLException;
-
 public class FittingRoom extends Activity {
     private final static String LOG_TAG = "FittingRoom";
     private RelativeLayout mainLayout;
     private GridView gridView;
+    public int screenWidth;
     public DownloadSettingsTask downloadSettingsTask;
     public Database mDatabase;
     public ProgressBar progressBar;
@@ -39,8 +39,7 @@ public class FittingRoom extends Activity {
 
         final DisplayMetrics displayMetrics = new DisplayMetrics();
         this.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-        final int screenWidth = displayMetrics.widthPixels;
-        final int screenHeight = displayMetrics.heightPixels;
+        screenWidth = displayMetrics.widthPixels;
 
         mainLayout = new RelativeLayout(this);
 
@@ -49,16 +48,15 @@ public class FittingRoom extends Activity {
         layoutParamsProgressBar.addRule(RelativeLayout.CENTER_IN_PARENT);
 
         gridView = new GridView(this);
+        gridView.setVerticalSpacing(screenWidth / 20);
+        gridView.setNumColumns(4);
+        gridView.setSelector(new StateListDrawable());
 
         progressBar = new ProgressBar(this);
         progressBar.setVisibility(View.INVISIBLE);
 
-        try {
-            mDatabase = new Database(this);
-            mDatabase.openToWrite();
-        } catch (SQLException e) {
-            Log.w(LOG_TAG, "openToWrite " + e);
-        }
+        mDatabase = new Database(this);
+        mDatabase.openToWrite();
 
         mainLayout.addView(gridView);
         mainLayout.addView(progressBar, layoutParamsProgressBar);
@@ -107,14 +105,19 @@ public class FittingRoom extends Activity {
         final NetworkInfo activeNetInfo = connectivityManager.getActiveNetworkInfo();
         final WifiManager wifiManager = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
         final WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-        final String macAddress = wifiInfo.getMacAddress();
+        final String macAddress = wifiInfo.getBSSID();
         Log.w(LOG_TAG, "MacAddress: " + macAddress);
         return activeNetInfo != null && activeNetInfo.getType() == ConnectivityManager.TYPE_WIFI
-                && macAddress.equals("5C:0A:5B:FC:2C:0E");
+                && macAddress.equals("00:1a:6b:c2:2b:30");
     }
 
     public void updateContentView() {
+        final BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inPreferredConfig = Bitmap.Config.ARGB_8888;
         Cursor cursor = null;
+        byte[] bytesIconIdle = null;
+        byte[] bytesIcon = null;
+        int imageSize = screenWidth / 5;
         try {
             cursor = mDatabase.getBackGroudImageSettings();
             if (cursor.moveToFirst()) {
@@ -125,12 +128,18 @@ public class FittingRoom extends Activity {
                     int blue = cursor.getInt(4);
                     mainLayout.setBackgroundColor(Color.rgb(red, green, blue));
                 } else {
-                    final BitmapFactory.Options options = new BitmapFactory.Options();
-                    options.inPreferredConfig = Bitmap.Config.RGB_565;
                     final byte[] bytes = cursor.getBlob(1);
                     final Drawable drawable = new BitmapDrawable(BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options));
                     mainLayout.setBackgroundDrawable(drawable);
                 }
+            }
+            cursor = mDatabase.getIconImage();
+            if (cursor.moveToFirst()) {
+                bytesIcon = cursor.getBlob(0);
+            }
+            cursor = mDatabase.getIdleIconImage();
+            if (cursor.moveToFirst()) {
+                bytesIconIdle = cursor.getBlob(0);
             }
         } catch (Exception e) {
             Log.w(LOG_TAG, "Error updateContentView " + e);
@@ -138,7 +147,9 @@ public class FittingRoom extends Activity {
             if (cursor != null) cursor.close();
         }
 
-        gridViewAdapter = new GridViewCustomAdapter(this);
+        gridViewAdapter = new GridViewCustomAdapter(this,
+                Bitmap.createScaledBitmap(BitmapFactory.decodeByteArray(bytesIcon, 0, bytesIcon.length, options), imageSize, imageSize, true),
+                Bitmap.createScaledBitmap(BitmapFactory.decodeByteArray(bytesIconIdle, 0, bytesIconIdle.length, options), imageSize, imageSize, true));
         gridView.setAdapter(gridViewAdapter);
     }
 }

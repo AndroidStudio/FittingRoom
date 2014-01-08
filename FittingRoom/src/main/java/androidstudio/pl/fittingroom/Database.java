@@ -6,8 +6,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
-import java.sql.SQLException;
-
 public class Database {
     private static final String DATABASENAME = "FITTINGROOM";
     private static final int DATABASEVERSION = 4;
@@ -86,20 +84,18 @@ public class Database {
         this.context = context;
     }
 
-    public Database openToWrite() throws SQLException {
-        sqLiteHelper = new SQLiteHelper(context, DATABASENAME, null, DATABASEVERSION);
+    public void openToWrite() {
+        sqLiteHelper = new SQLiteHelper(context);
         sqLiteDatabase = sqLiteHelper.getWritableDatabase();
-        return this;
     }
 
     public void close() {
         sqLiteHelper.close();
     }
 
-
     private class SQLiteHelper extends SQLiteOpenHelper {
-        public SQLiteHelper(Context context, String databasename, SQLiteDatabase.CursorFactory factory, int databaseversion) {
-            super(context, databasename, factory, databaseversion);
+        public SQLiteHelper(Context context) {
+            super(context, Database.DATABASENAME, null, Database.DATABASEVERSION);
         }
 
         @Override
@@ -183,6 +179,14 @@ public class Database {
 
     public Cursor getAlertUrl() {
         return sqLiteDatabase.query(KEY_ALLERTFILESETTINGS, new String[]{KEY_ALLERTFILESETTINGS_URL}, null, null, null, null, null);
+    }
+
+    public Cursor getIconImage() {
+        return sqLiteDatabase.query(KEY_ICONIMAGESETTINGS, new String[]{KEY_ICONIMAGESETTINGS_IMAGE}, null, null, null, null, null);
+    }
+
+    public Cursor getIdleIconImage() {
+        return sqLiteDatabase.query(KEY_IDLEIMAGESETTINGS, new String[]{KEY_IDLEIMAGESETTINGS_IMAGE}, null, null, null, null, null);
     }
 
 }

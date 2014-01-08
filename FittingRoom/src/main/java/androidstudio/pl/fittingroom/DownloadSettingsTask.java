@@ -30,8 +30,8 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
     private final static String LOG_TAG = "DownloadSettingsTask";
     private final FittingRoom fittingRoom;
     private String alertUrl;
-    private Handler handler = new Handler();
-    public DownloadAlertask downloadAlertTask;
+    private final Handler handler = new Handler();
+    private DownloadAlertask downloadAlertTask;
     public List<String> alertRoomNameList = new ArrayList<String>();
     public List<String> alertRoomStatusList = new ArrayList<String>();
 
@@ -276,17 +276,12 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
         }
 
         @Override
-        protected void onCancelled() {
-            super.onCancelled();
-        }
-
-        @Override
         protected void onPostExecute(Boolean result) {
             if (result) {
-                Toast.makeText(fittingRoom, "Update rooms success", Toast.LENGTH_LONG).show();
+                Log.w(LOG_TAG, "Update rooms success");
                 fittingRoom.gridViewAdapter.notifyDataSetChanged();
             } else {
-                Toast.makeText(fittingRoom, "Error updates rooms", Toast.LENGTH_LONG).show();
+                Log.w(LOG_TAG, "Error updates rooms");
             }
             handler.postDelayed(runnable, 1000);
         }
