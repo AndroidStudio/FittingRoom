@@ -2,8 +2,16 @@ package androidstudio.pl.fittingroom;
 
 import android.app.Activity;
 import android.content.Context;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
@@ -12,11 +20,14 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 
+import java.sql.SQLException;
+
 public class FittingRoom extends Activity {
     private final static String LOG_TAG = "FittingRoom";
+    private DownloadSettingsTask downloadSettingsTask;
+    private RelativeLayout mainLayout;
     public Database mDatabase;
     public ProgressBar progressBar;
-    private DownloadSettingsTask downloadSettingsTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,8 +39,7 @@ public class FittingRoom extends Activity {
         final int screenWidth = displayMetrics.widthPixels;
         final int screenHeight = displayMetrics.heightPixels;
 
-        final RelativeLayout mainLayout = new RelativeLayout(this);
-
+        mainLayout = new RelativeLayout(this);
 
         final int progresBarSize = screenWidth / 3;
         final RelativeLayout.LayoutParams layoutParamsProgressBar = new RelativeLayout.LayoutParams(progresBarSize, progresBarSize);
@@ -60,7 +70,7 @@ public class FittingRoom extends Activity {
                 return;
             }
         }
-        final String settingsUrl = "";
+        final String settingsUrl = "http://androidstudio.pl/fittingroom/Settings.json";
         downloadSettingsTask = new DownloadSettingsTask(this);
         downloadSettingsTask.execute(settingsUrl);
     }
@@ -73,8 +83,42 @@ public class FittingRoom extends Activity {
     }
 
     public boolean internetIsAvailable() {
-        final ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        final NetworkInfo netInfo = cm.getActiveNetworkInfo();
-        return netInfo != null && netInfo.isConnected();
+        final ConnectivityManager connectivityManager = (ConnectivityManager)
+                getSystemService(Context.CONNECTIVITY_SERVICE);
+        final NetworkInfo activeNetInfo = connectivityManager.getActiveNetworkInfo();
+        final WifiManager wifiManager = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
+        final WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+        final String macAddress = wifiInfo.getMacAddress();
+        Log.w(LOG_TAG, "MacAddress: " + macAddress);
+        return activeNetInfo != null && activeNetInfo.getType() == ConnectivityManager.TYPE_WIFI
+                && macAddress.equals("5C:0A:5B:FC:2C:0E");
+    }
+
+    public void updateContentView() {
+        Cursor cursor = null;
+        try {
+            mDatabase.openToWrite();
+            cursor = mDatabase.getBackGroudImageSettings();
+            if (cursor.moveToFirst()) {
+                final String mode = cursor.getString(0);
+                if (mode != null && mode.equals("Colour")) {
+                    int red = cursor.getInt(2);
+                    int green = cursor.getInt(3);
+                    int blue = cursor.getInt(4);
+                    mainLayout.setBackgroundColor(Color.rgb(red, green, blue));
+                } else {
+                    final BitmapFactory.Options options = new BitmapFactory.Options();
+                    options.inPreferredConfig = Bitmap.Config.RGB_565;
+                    final byte[] bytes = cursor.getBlob(1);
+                    final Drawable drawable = new BitmapDrawable(BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options));
+                    mainLayout.setBackgroundDrawable(drawable);
+                }
+            }
+        } catch (SQLException e) {
+            Log.w(LOG_TAG, "Error updateContentView " + e);
+        } finally {
+            if (cursor != null) cursor.close();
+            mDatabase.close();
+        }
     }
 }

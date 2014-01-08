@@ -1,6 +1,8 @@
 package androidstudio.pl.fittingroom;
 
+import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
@@ -11,7 +13,7 @@ public class Database {
     private static final int DATABASEVERSION = 1;
     private final Context context;
 
-    private SQLiteHelper sqlLiteHelper;
+    private SQLiteHelper sqLiteHelper;
     private SQLiteDatabase sqLiteDatabase;
 
     private static final String KEY_VERSION = "version";
@@ -83,14 +85,15 @@ public class Database {
     }
 
     public Database openToWrite() throws SQLException {
-        sqlLiteHelper = new SQLiteHelper(context, DATABASENAME, null, DATABASEVERSION);
-        sqLiteDatabase = sqlLiteHelper.getWritableDatabase();
+        sqLiteHelper = new SQLiteHelper(context, DATABASENAME, null, DATABASEVERSION);
+        sqLiteDatabase = sqLiteHelper.getWritableDatabase();
         return this;
     }
 
     public void close() {
-        sqlLiteHelper.close();
+        sqLiteHelper.close();
     }
+
 
     private class SQLiteHelper extends SQLiteOpenHelper {
         public SQLiteHelper(Context context, String databasename, SQLiteDatabase.CursorFactory factory, int databaseversion) {
@@ -116,4 +119,34 @@ public class Database {
             onCreate(db);
         }
     }
+
+    public Cursor getVersion() {
+        return sqLiteDatabase.query(KEY_VERSION, new String[]{KEY_VERSION_VALUE}, null, null, null, null, null);
+    }
+
+    public void insertVersion(int version) {
+        sqLiteDatabase.delete(KEY_VERSION, null, null);
+        final ContentValues values = new ContentValues();
+        values.put(KEY_VERSION_VALUE, version);
+        sqLiteDatabase.insert(KEY_VERSION, null, values);
+    }
+
+    public void insertBackgroundImageSettings(String backgroundMode, byte[] backgroundImage, int red, int green, int blue) {
+        sqLiteDatabase.delete(KEY_BACKGROUNDIMAGESETTINGS, null, null);
+        final ContentValues values = new ContentValues();
+        values.put(KEY_BACKGROUNDIMAGESETTINGS_MODE, backgroundMode);
+        values.put(KEY_BACKGROUNDIMAGESETTINGS_IMAGE, backgroundImage);
+        values.put(KEY_BACKGROUNDIMAGESETTINGS_RED, red);
+        values.put(KEY_BACKGROUNDIMAGESETTINGS_GREEN, green);
+        values.put(KEY_BACKGROUNDIMAGESETTINGS_BLUE, blue);
+        sqLiteDatabase.insert(KEY_BACKGROUNDIMAGESETTINGS, null, values);
+    }
+
+    public Cursor getBackGroudImageSettings() {
+        return sqLiteDatabase.query(KEY_BACKGROUNDIMAGESETTINGS, new String[]{
+                KEY_BACKGROUNDIMAGESETTINGS_MODE, KEY_BACKGROUNDIMAGESETTINGS_IMAGE,
+                KEY_BACKGROUNDIMAGESETTINGS_RED, KEY_BACKGROUNDIMAGESETTINGS_GREEN,
+                KEY_BACKGROUNDIMAGESETTINGS_BLUE}, null, null, null, null, null);
+    }
+
 }

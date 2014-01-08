@@ -30,4 +30,6 @@ android {
     }
 }
 
-dependencies {}
+dependencies {
+    compile files('src/libraries/commons-io-2.4.jar')
+}
