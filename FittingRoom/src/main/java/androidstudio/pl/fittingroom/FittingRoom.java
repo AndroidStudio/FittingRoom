@@ -1,7 +1,9 @@
 package androidstudio.pl.fittingroom;
 
 import android.app.Activity;
+import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -51,6 +53,15 @@ public class FittingRoom extends Activity {
         super.onCreate(savedInstanceState);
         Log.w(LOG_TAG, "onCreate");
         mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        final Intent notificationIntent = new Intent(this, FittingRoom.class);
+        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        final PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+        final Notification notification = new Notification(R.drawable.ic_launcher,
+                "Fitting Room Aplication", System.currentTimeMillis());
+        notification.setLatestEventInfo(this, "Fitting Room Application", "Status: Running", contentIntent);
+        notification.flags = Notification.FLAG_ONGOING_EVENT;
+        notification.defaults = Notification.DEFAULT_ALL;
+        mNotificationManager.notify(12308531, notification);
         final DisplayMetrics displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         screenWidth = displayMetrics.widthPixels;
@@ -107,6 +118,8 @@ public class FittingRoom extends Activity {
                 }
                 downloadSettingsTask = new DownloadSettingsTask(FittingRoom.this);
                 downloadSettingsTask.execute(settingsUrl);
+            } else {
+                reconnectButton.setVisibility(View.VISIBLE);
             }
         }
     };
@@ -128,7 +141,9 @@ public class FittingRoom extends Activity {
     protected void onPause() {
         super.onPause();
         Log.w(LOG_TAG, "onPause");
-        downloadSettingsTask.cancel(true);
+        if (downloadSettingsTask != null) {
+            downloadSettingsTask.cancel(true);
+        }
     }
 
     @Override
@@ -136,9 +151,18 @@ public class FittingRoom extends Activity {
         super.onDestroy();
         Log.w(LOG_TAG, "onDestroy");
         unregisterReceiver(mConnectionReceiver);
-        downloadSettingsTask.close();
+        if (downloadSettingsTask != null) {
+            downloadSettingsTask.close();
+        }
+
     }
 
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        mNotificationManager.cancel(12308531);
+        mNotificationManager.cancel(12308534);
+    }
 
     public boolean internetIsAvailable() {
         final ConnectivityManager connectivityManager = (ConnectivityManager)
@@ -226,19 +250,13 @@ public class FittingRoom extends Activity {
                 }
             });
         }
-
     }
 
 
     private final GridView.OnScrollListener onScrollListener = new GridView.OnScrollListener() {
         @Override
         public void onScrollStateChanged(AbsListView absListView, int scrollState) {
-            if (scrollState == SCROLL_STATE_FLING || scrollState == SCROLL_STATE_TOUCH_SCROLL) {
-                mIsScrolling = true;
-            } else {
-                mIsScrolling = false;
-            }
-
+            mIsScrolling = scrollState == SCROLL_STATE_FLING || scrollState == SCROLL_STATE_TOUCH_SCROLL;
         }
 
         @Override
