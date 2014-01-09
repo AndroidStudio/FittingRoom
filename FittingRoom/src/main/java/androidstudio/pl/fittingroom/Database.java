@@ -186,7 +186,8 @@ public class Database {
     }
 
     public Cursor getIdleIconImage() {
-        return sqLiteDatabase.query(KEY_IDLEIMAGESETTINGS, new String[]{KEY_IDLEIMAGESETTINGS_IMAGE}, null, null, null, null, null);
+        return sqLiteDatabase.query(KEY_IDLEIMAGESETTINGS, new String[]{KEY_IDLEIMAGESETTINGS_IMAGE,
+                KEY_IDLEIMAGESETTINGS_SHOW_IDLE_IMAGE}, null, null, null, null, null);
     }
 
 }

@@ -1,6 +1,9 @@
 package androidstudio.pl.fittingroom;
 
 
+import android.app.Notification;
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.database.Cursor;
 import android.net.http.AndroidHttpClient;
 import android.os.AsyncTask;
@@ -30,10 +33,11 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
     private final static String LOG_TAG = "DownloadSettingsTask";
     private final FittingRoom fittingRoom;
     private String alertUrl;
-    private final Handler handler = new Handler();
-    private DownloadAlertask downloadAlertTask;
+    public final Handler handler = new Handler();
+    public DownloadAlertask downloadAlertTask;
     public List<String> alertRoomNameList = new ArrayList<String>();
     public List<String> alertRoomStatusList = new ArrayList<String>();
+    private List<String> bufforAlertRoomStatusList = new ArrayList<String>();
 
     public DownloadSettingsTask(FittingRoom fittingRoom) {
         this.fittingRoom = fittingRoom;
@@ -43,14 +47,14 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
     protected void onPreExecute() {
         Log.w(LOG_TAG, "onPreExecute");
         fittingRoom.progressBar.setVisibility(View.VISIBLE);
-        if (!fittingRoom.internetIsAvailable()) {
-            Toast.makeText(this.fittingRoom,
-                    "Proszę połączyć się z siecią WIFI o adresie: 5C:0A:5B:FC:2C:0E",
-                    Toast.LENGTH_LONG).show();
-            Log.e(LOG_TAG, "No internet connection");
-            cancel(true);
-            fittingRoom.finish();
-        }
+//        if (!fittingRoom.internetIsAvailable()) {
+//            Toast.makeText(this.fittingRoom,
+//                    "Proszę połączyć się z siecią WIFI o adresie: 5C:0A:5B:FC:2C:0E",
+//                    Toast.LENGTH_LONG).show();
+//            Log.e(LOG_TAG, "No internet connection");
+//            cancel(true);
+//            fittingRoom.finish();
+//        }
     }
 
     @Override
@@ -179,15 +183,8 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
     protected void onPostExecute(Boolean result) {
         Log.w(LOG_TAG, "onPostExecute");
         if (result) {
-            fittingRoom.progressBar.setVisibility(View.INVISIBLE);
             fittingRoom.updateContentView();
             Toast.makeText(this.fittingRoom, "Update settings success", Toast.LENGTH_LONG).show();
-            if (downloadAlertTask != null) {
-                AsyncTask.Status diStatus = downloadAlertTask.getStatus();
-                if (diStatus != AsyncTask.Status.FINISHED) {
-                    return;
-                }
-            }
             final Cursor cursor = fittingRoom.mDatabase.getAlertUrl();
             if (cursor.moveToFirst()) {
                 try {
@@ -199,11 +196,12 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
 
             downloadAlertTask = new DownloadAlertask();
             downloadAlertTask.execute();
+
         } else {
             Toast.makeText(this.fittingRoom, "Error downloading data", Toast.LENGTH_LONG).show();
-            fittingRoom.progressBar.setVisibility(View.INVISIBLE);
+            fittingRoom.reconnectButton.setVisibility(View.VISIBLE);
         }
-
+        fittingRoom.progressBar.setVisibility(View.INVISIBLE);
     }
 
     public void close() {
@@ -218,10 +216,21 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
         }
     }
 
-    private class DownloadAlertask extends AsyncTask<String, Integer, Boolean> {
+    public class DownloadAlertask extends AsyncTask<String, Integer, Boolean> {
+        private String roomName;
+        private boolean isStatusChange = false;
+
         @Override
         protected void onPreExecute() {
-
+            fittingRoom.progressBar.setVisibility(View.VISIBLE);
+//            if (!fittingRoom.internetIsAvailable()) {
+//                Toast.makeText(fittingRoom,
+//                        "Proszę połączyć się z siecią WIFI o adresie: 5C:0A:5B:FC:2C:0E",
+//                        Toast.LENGTH_LONG).show();
+//                Log.e(LOG_TAG, "No internet connection");
+//                cancel(true);
+//                fittingRoom.finish();
+//            }
         }
 
         @Override
@@ -246,16 +255,33 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
                         while ((line = bufferedReader.readLine()) != null) {
                             stringBuilder.append(line);
                         }
-                        alertRoomNameList = new ArrayList<String>();
-                        alertRoomStatusList = new ArrayList<String>();
+                        alertRoomNameList.clear();
+                        alertRoomStatusList.clear();
                         final JSONObject jsonObject = new JSONObject(stringBuilder.toString());
                         final JSONArray jsonArrayRoomAlert = jsonObject.getJSONArray("RoomAlert");
+
                         for (int i = 0; i < jsonArrayRoomAlert.length(); i++) {
                             JSONObject roomAlertPbject = jsonArrayRoomAlert.getJSONObject(i);
                             String roomName = roomAlertPbject.getString("RoomName");
                             String roomStatus = roomAlertPbject.getString("RoomStatus");
-                            alertRoomNameList.add(roomName);
-                            alertRoomStatusList.add(roomStatus);
+                            if (fittingRoom.showIdleIcon.equals("No")) {
+                                if (!roomStatus.equals("Idle")) {
+                                    alertRoomNameList.add(roomName);
+                                    alertRoomStatusList.add(roomStatus);
+                                    checkStatusChange(roomName, roomStatus, i);
+                                }
+                            } else {
+                                alertRoomNameList.add(roomName);
+                                alertRoomStatusList.add(roomStatus);
+                                checkStatusChange(roomName, roomStatus, i);
+                            }
+                        }
+                        bufforAlertRoomStatusList.clear();
+                        for (String status : alertRoomStatusList) {
+                            bufforAlertRoomStatusList.add(status);
+                        }
+                        if (isStatusChange) {
+                            setDefaultNotification(Notification.DEFAULT_ALL);
                         }
                     } catch (Exception e) {
                         Log.w(LOG_TAG, "Error: " + e);
@@ -275,19 +301,57 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
             return true;
         }
 
+
+        private void checkStatusChange(String roomName, String roomStatus, int i) {
+            try {
+                final String lastRoomStatus = bufforAlertRoomStatusList.get(i);
+                if (!lastRoomStatus.equals(roomStatus)) {
+                    isStatusChange = true;
+                    this.roomName = roomName;
+                }
+            } catch (Exception e) {
+                //isStatusChange = true;
+            }
+        }
+
+        private void setDefaultNotification(int defaults) {
+            Intent notificationIntent = new Intent(fittingRoom, FittingRoom.class);
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+            PendingIntent contentIntent = PendingIntent.getActivity(fittingRoom, 0, notificationIntent, 0);
+
+            CharSequence text = fittingRoom.getText(R.string.statuschange);
+
+            final Notification notification = new Notification(android.R.drawable.ic_dialog_alert,
+                    text, System.currentTimeMillis());
+
+            notification.setLatestEventInfo(fittingRoom, text, "Zmiana statusu przymierzalni nr. " +
+                    roomName, contentIntent);
+            notification.defaults = defaults;
+            notification.flags |= Notification.FLAG_AUTO_CANCEL;
+
+            fittingRoom.mNotificationManager.notify(12308534, notification);
+        }
+
         @Override
         protected void onPostExecute(Boolean result) {
             if (result) {
                 Log.w(LOG_TAG, "Update rooms success");
-                fittingRoom.gridViewAdapter.notifyDataSetChanged();
+                if (!fittingRoom.mIsScrolling)
+                    fittingRoom.gridViewAdapter.notifyDataSetChanged();
+                handler.postDelayed(runnable, 1000);
             } else {
                 Log.w(LOG_TAG, "Error updates rooms");
+                fittingRoom.reconnectButton.setVisibility(View.VISIBLE);
+                //notyfikacja brak połaczenia
             }
-            handler.postDelayed(runnable, 1000);
+
+            fittingRoom.progressBar.setVisibility(View.INVISIBLE);
         }
     }
 
-    private final Runnable runnable = new Runnable() {
+    public final Runnable runnable = new Runnable() {
         @Override
         public void run() {
             downloadAlertTask = new DownloadAlertask();

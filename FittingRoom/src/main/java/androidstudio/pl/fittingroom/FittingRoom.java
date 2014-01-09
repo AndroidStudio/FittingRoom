@@ -1,6 +1,7 @@
 package androidstudio.pl.fittingroom;
 
 import android.app.Activity;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -18,11 +19,17 @@ import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
+import android.widget.AbsListView;
+import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.GridView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 public class FittingRoom extends Activity {
+    private final static String urlChangeStatus = "http://androidstudio.pl/fittingroom/changestatus.php";
+    private final static String settingsUrl = "http://androidstudio.pl/fittingroom/Settings.json";
     private final static String LOG_TAG = "FittingRoom";
     private RelativeLayout mainLayout;
     private GridView gridView;
@@ -31,11 +38,16 @@ public class FittingRoom extends Activity {
     public Database mDatabase;
     public ProgressBar progressBar;
     public GridViewCustomAdapter gridViewAdapter;
+    public boolean mIsScrolling;
+    public String showIdleIcon;
+    public NotificationManager mNotificationManager;
+    public Button reconnectButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.w(LOG_TAG, "onCreate");
+        mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 
         final DisplayMetrics displayMetrics = new DisplayMetrics();
         this.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
@@ -51,15 +63,25 @@ public class FittingRoom extends Activity {
         gridView.setVerticalSpacing(screenWidth / 20);
         gridView.setNumColumns(4);
         gridView.setSelector(new StateListDrawable());
+        gridView.setOnScrollListener(onScrollListener);
 
         progressBar = new ProgressBar(this);
         progressBar.setVisibility(View.INVISIBLE);
+
+        final RelativeLayout.LayoutParams layoutParamsRecconect = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+        layoutParamsRecconect.addRule(RelativeLayout.CENTER_IN_PARENT);
+
+        reconnectButton = new Button(this);
+        reconnectButton.setText(getText(R.string.reconnectbutton));
+        reconnectButton.setVisibility(View.INVISIBLE);
+        reconnectButton.setOnClickListener(onRefreshClickListener);
 
         mDatabase = new Database(this);
         mDatabase.openToWrite();
 
         mainLayout.addView(gridView);
         mainLayout.addView(progressBar, layoutParamsProgressBar);
+        mainLayout.addView(reconnectButton, layoutParamsRecconect);
         this.setContentView(mainLayout);
     }
 
@@ -74,12 +96,15 @@ public class FittingRoom extends Activity {
         super.onResume();
         Log.w(LOG_TAG, "onResume");
         if (downloadSettingsTask != null) {
-            AsyncTask.Status diStatus = downloadSettingsTask.getStatus();
+            if (downloadSettingsTask.downloadAlertTask != null) {
+                downloadSettingsTask.downloadAlertTask.cancel(true);
+                downloadSettingsTask.handler.removeCallbacks(downloadSettingsTask.runnable);
+            }
+            final AsyncTask.Status diStatus = downloadSettingsTask.getStatus();
             if (diStatus != AsyncTask.Status.FINISHED) {
                 return;
             }
         }
-        final String settingsUrl = "http://androidstudio.pl/fittingroom/Settings.json";
         downloadSettingsTask = new DownloadSettingsTask(this);
         downloadSettingsTask.execute(settingsUrl);
     }
@@ -111,6 +136,25 @@ public class FittingRoom extends Activity {
                 && macAddress.equals("00:1a:6b:c2:2b:30");
     }
 
+    private final Button.OnClickListener onRefreshClickListener = new Button.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            reconnectButton.setVisibility(View.INVISIBLE);
+            if (downloadSettingsTask != null) {
+                if (downloadSettingsTask.downloadAlertTask != null) {
+                    downloadSettingsTask.downloadAlertTask.cancel(true);
+                    downloadSettingsTask.handler.removeCallbacks(downloadSettingsTask.runnable);
+                }
+                final AsyncTask.Status diStatus = downloadSettingsTask.getStatus();
+                if (diStatus != AsyncTask.Status.FINISHED) {
+                    return;
+                }
+            }
+            downloadSettingsTask = new DownloadSettingsTask(FittingRoom.this);
+            downloadSettingsTask.execute(settingsUrl);
+        }
+    };
+
     public void updateContentView() {
         final BitmapFactory.Options options = new BitmapFactory.Options();
         options.inPreferredConfig = Bitmap.Config.ARGB_8888;
@@ -140,6 +184,7 @@ public class FittingRoom extends Activity {
             cursor = mDatabase.getIdleIconImage();
             if (cursor.moveToFirst()) {
                 bytesIconIdle = cursor.getBlob(0);
+                showIdleIcon = cursor.getString(1);
             }
         } catch (Exception e) {
             Log.w(LOG_TAG, "Error updateContentView " + e);
@@ -147,9 +192,41 @@ public class FittingRoom extends Activity {
             if (cursor != null) cursor.close();
         }
 
-        gridViewAdapter = new GridViewCustomAdapter(this,
+        gridViewAdapter = new GridViewCustomAdapter(this, downloadSettingsTask.alertRoomNameList, downloadSettingsTask.alertRoomStatusList,
                 Bitmap.createScaledBitmap(BitmapFactory.decodeByteArray(bytesIcon, 0, bytesIcon.length, options), imageSize, imageSize, true),
                 Bitmap.createScaledBitmap(BitmapFactory.decodeByteArray(bytesIconIdle, 0, bytesIconIdle.length, options), imageSize, imageSize, true));
         gridView.setAdapter(gridViewAdapter);
+        gridView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
+                TextView textViewName = (TextView) view.findViewById(39874528);
+                CharSequence name = textViewName.getText();
+                TextView textViewStatus = (TextView) view.findViewById(39874529);
+                CharSequence status = textViewStatus.getText();
+                //Toast.makeText(FittingRoom.this, name + " " + status, Toast.LENGTH_LONG).show();
+                ChangeStatusTask changeStatusTask = new ChangeStatusTask(name, status);
+                changeStatusTask.execute(urlChangeStatus);
+                return true;
+            }
+        });
     }
+
+
+    private final GridView.OnScrollListener onScrollListener = new GridView.OnScrollListener() {
+        @Override
+        public void onScrollStateChanged(AbsListView absListView, int scrollState) {
+            if (scrollState == SCROLL_STATE_FLING || scrollState == SCROLL_STATE_TOUCH_SCROLL) {
+                mIsScrolling = true;
+            } else {
+                mIsScrolling = false;
+            }
+
+        }
+
+        @Override
+        public void onScroll(AbsListView absListView, int i, int i2, int i3) {
+
+        }
+    };
+
 }
