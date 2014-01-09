@@ -13,10 +13,10 @@ import org.apache.http.message.BasicNameValuePair;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ChangeStatusTask extends AsyncTask<String, Integer, Boolean> {
+class ChangeStatusTask extends AsyncTask<String, Integer, Boolean> {
     private final CharSequence name;
     private final CharSequence status;
-    private String LOG_TAG = "ChangeStatusTask";
+    private final String LOG_TAG = "ChangeStatusTask";
 
     public ChangeStatusTask(CharSequence name, CharSequence status) {
         if (status.equals("Idle")) {

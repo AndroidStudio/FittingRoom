@@ -35,9 +35,9 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
     private String alertUrl;
     public final Handler handler = new Handler();
     public DownloadAlertask downloadAlertTask;
-    public List<String> alertRoomNameList = new ArrayList<String>();
-    public List<String> alertRoomStatusList = new ArrayList<String>();
-    private List<String> bufforAlertRoomStatusList = new ArrayList<String>();
+    public final List<String> alertRoomNameList = new ArrayList<String>();
+    public final List<String> alertRoomStatusList = new ArrayList<String>();
+    private final List<String> bufforAlertRoomStatusList = new ArrayList<String>();
 
     public DownloadSettingsTask(FittingRoom fittingRoom) {
         this.activity = fittingRoom;
@@ -281,7 +281,7 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
                             bufforAlertRoomStatusList.add(status);
                         }
                         if (isStatusChange) {
-                            setDefaultNotification(Notification.DEFAULT_ALL);
+                            setDefaultNotification();
                         }
                     } catch (Exception e) {
                         Log.w(LOG_TAG, "Error: " + e);
@@ -314,7 +314,7 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
             }
         }
 
-        private void setDefaultNotification(int defaults) {
+        private void setDefaultNotification() {
             final Intent notificationIntent = new Intent(activity, FittingRoom.class);
             notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             final PendingIntent contentIntent = PendingIntent.getActivity(activity, 0, notificationIntent, 0);
@@ -324,7 +324,7 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
 
             notification.setLatestEventInfo(activity, text, "Zmiana statusu przymierzalni nr. " +
                     roomName, contentIntent);
-            notification.defaults = defaults;
+            notification.defaults = Notification.DEFAULT_ALL;
             notification.flags |= Notification.FLAG_AUTO_CANCEL;
 
             activity.mNotificationManager.notify(12308534, notification);

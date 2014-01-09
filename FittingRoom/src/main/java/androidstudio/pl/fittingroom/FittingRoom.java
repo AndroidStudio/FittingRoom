@@ -39,7 +39,7 @@ public class FittingRoom extends Activity {
     private RelativeLayout mainLayout;
     private GridView gridView;
     public int screenWidth;
-    public DownloadSettingsTask downloadSettingsTask;
+    private DownloadSettingsTask downloadSettingsTask;
     public Database mDatabase;
     public ProgressBar progressBar;
     public GridViewCustomAdapter gridViewAdapter;
@@ -56,11 +56,11 @@ public class FittingRoom extends Activity {
         final Intent notificationIntent = new Intent(this, FittingRoom.class);
         notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         final PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
-        final Notification notification = new Notification(R.drawable.ic_launcher,
+        final Notification notification = new Notification(R.drawable.ic_fitting_room,
                 "Fitting Room Aplication", System.currentTimeMillis());
         notification.setLatestEventInfo(this, "Fitting Room Application", "Status: Running", contentIntent);
         notification.flags = Notification.FLAG_ONGOING_EVENT;
-        notification.defaults = Notification.DEFAULT_ALL;
+        notification.defaults = Notification.DEFAULT_VIBRATE;
         mNotificationManager.notify(12308531, notification);
         final DisplayMetrics displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
