@@ -2,7 +2,10 @@ package androidstudio.pl.fittingroom;
 
 import android.app.Activity;
 import android.app.NotificationManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -48,9 +51,8 @@ public class FittingRoom extends Activity {
         super.onCreate(savedInstanceState);
         Log.w(LOG_TAG, "onCreate");
         mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-
         final DisplayMetrics displayMetrics = new DisplayMetrics();
-        this.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         screenWidth = displayMetrics.widthPixels;
 
         mainLayout = new RelativeLayout(this);
@@ -82,8 +84,32 @@ public class FittingRoom extends Activity {
         mainLayout.addView(gridView);
         mainLayout.addView(progressBar, layoutParamsProgressBar);
         mainLayout.addView(reconnectButton, layoutParamsRecconect);
-        this.setContentView(mainLayout);
+
+        setContentView(mainLayout);
+        registerReceiver(mConnectionReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
     }
+
+    private final BroadcastReceiver mConnectionReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            final NetworkInfo currentNetworkInfo = intent.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
+            if (currentNetworkInfo != null && currentNetworkInfo.isConnected()) {
+                Log.w(LOG_TAG, "Connected to Internet");
+                reconnectButton.setVisibility(View.INVISIBLE);
+                if (downloadSettingsTask != null) {
+                    if (downloadSettingsTask.downloadAlertTask != null) {
+                        downloadSettingsTask.downloadAlertTask.cancel(true);
+                        downloadSettingsTask.handler.removeCallbacks(downloadSettingsTask.runnable);
+                    }
+                    final AsyncTask.Status diStatus = downloadSettingsTask.getStatus();
+                    if (diStatus != AsyncTask.Status.FINISHED) {
+                        return;
+                    }
+                }
+                downloadSettingsTask = new DownloadSettingsTask(FittingRoom.this);
+                downloadSettingsTask.execute(settingsUrl);
+            }
+        }
+    };
 
     @Override
     protected void onStart() {
@@ -95,18 +121,7 @@ public class FittingRoom extends Activity {
     protected void onResume() {
         super.onResume();
         Log.w(LOG_TAG, "onResume");
-        if (downloadSettingsTask != null) {
-            if (downloadSettingsTask.downloadAlertTask != null) {
-                downloadSettingsTask.downloadAlertTask.cancel(true);
-                downloadSettingsTask.handler.removeCallbacks(downloadSettingsTask.runnable);
-            }
-            final AsyncTask.Status diStatus = downloadSettingsTask.getStatus();
-            if (diStatus != AsyncTask.Status.FINISHED) {
-                return;
-            }
-        }
-        downloadSettingsTask = new DownloadSettingsTask(this);
-        downloadSettingsTask.execute(settingsUrl);
+
     }
 
     @Override
@@ -120,6 +135,7 @@ public class FittingRoom extends Activity {
     protected void onDestroy() {
         super.onDestroy();
         Log.w(LOG_TAG, "onDestroy");
+        unregisterReceiver(mConnectionReceiver);
         downloadSettingsTask.close();
     }
 
@@ -192,23 +208,25 @@ public class FittingRoom extends Activity {
             if (cursor != null) cursor.close();
         }
 
-        gridViewAdapter = new GridViewCustomAdapter(this, downloadSettingsTask.alertRoomNameList, downloadSettingsTask.alertRoomStatusList,
-                Bitmap.createScaledBitmap(BitmapFactory.decodeByteArray(bytesIcon, 0, bytesIcon.length, options), imageSize, imageSize, true),
-                Bitmap.createScaledBitmap(BitmapFactory.decodeByteArray(bytesIconIdle, 0, bytesIconIdle.length, options), imageSize, imageSize, true));
-        gridView.setAdapter(gridViewAdapter);
-        gridView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
-                TextView textViewName = (TextView) view.findViewById(39874528);
-                CharSequence name = textViewName.getText();
-                TextView textViewStatus = (TextView) view.findViewById(39874529);
-                CharSequence status = textViewStatus.getText();
-                //Toast.makeText(FittingRoom.this, name + " " + status, Toast.LENGTH_LONG).show();
-                ChangeStatusTask changeStatusTask = new ChangeStatusTask(name, status);
-                changeStatusTask.execute(urlChangeStatus);
-                return true;
-            }
-        });
+        if (bytesIconIdle != null && bytesIcon != null) {
+            gridViewAdapter = new GridViewCustomAdapter(this, downloadSettingsTask.alertRoomNameList, downloadSettingsTask.alertRoomStatusList,
+                    Bitmap.createScaledBitmap(BitmapFactory.decodeByteArray(bytesIcon, 0, bytesIcon.length, options), imageSize, imageSize, true),
+                    Bitmap.createScaledBitmap(BitmapFactory.decodeByteArray(bytesIconIdle, 0, bytesIconIdle.length, options), imageSize, imageSize, true));
+            gridView.setAdapter(gridViewAdapter);
+            gridView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+                @Override
+                public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
+                    final TextView textViewName = (TextView) view.findViewById(39874528);
+                    final CharSequence name = textViewName.getText();
+                    final TextView textViewStatus = (TextView) view.findViewById(39874529);
+                    final CharSequence status = textViewStatus.getText();
+                    final ChangeStatusTask changeStatusTask = new ChangeStatusTask(name, status);
+                    changeStatusTask.execute(urlChangeStatus);
+                    return true;
+                }
+            });
+        }
+
     }
 
 

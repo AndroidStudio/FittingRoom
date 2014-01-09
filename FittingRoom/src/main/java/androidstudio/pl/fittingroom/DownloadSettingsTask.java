@@ -337,6 +337,7 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
         @Override
         protected void onPostExecute(Boolean result) {
             if (result) {
+                fittingRoom.reconnectButton.setVisibility(View.INVISIBLE);
                 Log.w(LOG_TAG, "Update rooms success");
                 if (!fittingRoom.mIsScrolling)
                     fittingRoom.gridViewAdapter.notifyDataSetChanged();

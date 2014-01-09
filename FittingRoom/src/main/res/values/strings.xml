@@ -3,6 +3,6 @@
 
     <string name="app_name">Fitting Room</string>
     <string name="statuschange">Zmiana statusu przymierzalni</string>
-    <string name="reconnectbutton">Reconnect</string>
+    <string name="reconnectbutton">Device not connected \n please click to reconnect</string>
 
 </resources>
