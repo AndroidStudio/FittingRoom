@@ -301,7 +301,6 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
             return true;
         }
 
-
         private void checkStatusChange(String roomName, String roomStatus, int i) {
             try {
                 final String lastRoomStatus = bufforAlertRoomStatusList.get(i);

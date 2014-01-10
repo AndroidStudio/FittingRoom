@@ -1,31 +1,33 @@
 package androidstudio.pl.fittingroom;
 
+import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.util.TypedValue;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import java.util.List;
 
 public class GridViewCustomAdapter extends BaseAdapter {
-    private final FittingRoom fittingRoom;
+    private final FittingRoom activity;
     private final List<String> alertRoomNameList;
     private final List<String> alertRoomStatusList;
     private final Bitmap IconImage;
     private final Bitmap IdleIconImage;
+    private final LayoutInflater layoutInflater;
 
 
     public GridViewCustomAdapter(FittingRoom fittingRoom, List<String> alertRoomNameList, List<String> alertRoomStatusList, Bitmap IconImage, Bitmap IdleIconImage) {
-        this.fittingRoom = fittingRoom;
+        this.activity = fittingRoom;
         this.alertRoomNameList = alertRoomNameList;
         this.alertRoomStatusList = alertRoomStatusList;
         this.IconImage = IconImage;
         this.IdleIconImage = IdleIconImage;
+        this.layoutInflater = (LayoutInflater) activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     }
 
     @Override
@@ -46,40 +48,36 @@ public class GridViewCustomAdapter extends BaseAdapter {
     @Override
     public View getView(int i, View view, ViewGroup viewGroup) {
         try {
-            final RelativeLayout relativeLayout = new RelativeLayout(fittingRoom);
-            final ImageView imageView = new ImageView(fittingRoom);
-
-            if (alertRoomStatusList.get(i).equals("Idle")) {
-                imageView.setImageBitmap(IdleIconImage);
+            final ViewHolder holder;
+            if (view == null) {
+                holder = new ViewHolder();
+                view = layoutInflater.inflate(R.layout.gridview_item, null);
+                if (view != null) {
+                    holder.textViewName = (TextView) view.findViewById(R.id.name);
+                    holder.textViewName.setTextSize(TypedValue.COMPLEX_UNIT_PX, 0.1f * activity.screenWidth);
+                    holder.textViewStatus = (TextView) view.findViewById(R.id.status);
+                    holder.imageView = (ImageView) view.findViewById(R.id.icon);
+                    view.setTag(holder);
+                }
             } else {
-                imageView.setImageBitmap(IconImage);
+                holder = (ViewHolder) view.getTag();
             }
-
-            final RelativeLayout.LayoutParams layoutParamsTextView = new RelativeLayout.LayoutParams(
-                    RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
-            layoutParamsTextView.addRule(RelativeLayout.CENTER_IN_PARENT);
-
-            final RelativeLayout.LayoutParams layoutParamsImage = new RelativeLayout.LayoutParams(
-                    fittingRoom.screenWidth / 5, fittingRoom.screenWidth / 5);
-            layoutParamsImage.addRule(RelativeLayout.CENTER_IN_PARENT);
-
-            final TextView textView = new TextView(fittingRoom);
-            textView.setText(alertRoomNameList.get(i));
-            textView.setTextSize(TypedValue.COMPLEX_UNIT_PX, 0.1f * fittingRoom.screenWidth);
-            textView.setTextColor(Color.BLACK);
-            textView.setId(39874528);
-
-            final TextView textViewStatus = new TextView(fittingRoom);
-            textViewStatus.setText(alertRoomStatusList.get(i));
-            textViewStatus.setId(39874529);
-            textViewStatus.setVisibility(View.INVISIBLE);
-
-            relativeLayout.addView(imageView, layoutParamsImage);
-            relativeLayout.addView(textView, layoutParamsTextView);
-            relativeLayout.addView(textViewStatus);
-            return relativeLayout;
+            if (alertRoomStatusList.get(i).equals("Idle")) {
+                holder.imageView.setImageBitmap(IdleIconImage);
+            } else {
+                holder.imageView.setImageBitmap(IconImage);
+            }
+            holder.textViewName.setText(alertRoomNameList.get(i));
+            holder.textViewStatus.setText(alertRoomStatusList.get(i));
+            return view;
         } catch (Exception e) {
-            return new View(fittingRoom);
+            return new View(activity);
         }
+    }
+
+    private class ViewHolder {
+        public TextView textViewName;
+        public TextView textViewStatus;
+        public ImageView imageView;
     }
 }

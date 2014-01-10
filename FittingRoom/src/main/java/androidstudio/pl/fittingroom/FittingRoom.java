@@ -207,9 +207,9 @@ public class FittingRoom extends Activity {
             if (cursor.moveToFirst()) {
                 final String mode = cursor.getString(0);
                 if (mode != null && mode.equals("Colour")) {
-                    int red = cursor.getInt(2);
-                    int green = cursor.getInt(3);
-                    int blue = cursor.getInt(4);
+                    final int red = cursor.getInt(2);
+                    final int green = cursor.getInt(3);
+                    final int blue = cursor.getInt(4);
                     mainLayout.setBackgroundColor(Color.rgb(red, green, blue));
                 } else {
                     final byte[] bytes = cursor.getBlob(1);
