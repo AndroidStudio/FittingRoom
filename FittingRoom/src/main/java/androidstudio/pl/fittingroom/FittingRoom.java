@@ -240,9 +240,9 @@ public class FittingRoom extends Activity {
             gridView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
                 @Override
                 public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
-                    final TextView textViewName = (TextView) view.findViewById(39874528);
+                    final TextView textViewName = (TextView) view.findViewById(R.id.name);
                     final CharSequence name = textViewName.getText();
-                    final TextView textViewStatus = (TextView) view.findViewById(39874529);
+                    final TextView textViewStatus = (TextView) view.findViewById(R.id.status);
                     final CharSequence status = textViewStatus.getText();
                     final ChangeStatusTask changeStatusTask = new ChangeStatusTask(name, status);
                     changeStatusTask.execute(urlChangeStatus);

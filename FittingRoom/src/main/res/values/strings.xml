@@ -2,7 +2,7 @@
 <resources>
 
     <string name="app_name">Fitting Room</string>
-    <string name="statuschange">Zmiana statusu przymierzalni</string>
+    <string name="statuschange">Zmiana statusu przymierzalni numer: </string>
     <string name="reconnectbutton">Device not connected \n please click to reconnect</string>
     <string name="icondescription">icon</string>
 

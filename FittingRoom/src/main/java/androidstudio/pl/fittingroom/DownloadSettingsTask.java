@@ -319,9 +319,9 @@ public class DownloadSettingsTask extends AsyncTask<String, Integer, Boolean> {
             final PendingIntent contentIntent = PendingIntent.getActivity(activity, 0, notificationIntent, 0);
             final CharSequence text = activity.getText(R.string.statuschange);
             final Notification notification = new Notification(android.R.drawable.ic_dialog_alert,
-                    text, System.currentTimeMillis());
+                    text + " " + roomName, System.currentTimeMillis());
 
-            notification.setLatestEventInfo(activity, text, "Zmiana statusu przymierzalni nr. " +
+            notification.setLatestEventInfo(activity, "Zmiana statusu przymierzalni", "Przymierzalnia numer: " +
                     roomName, contentIntent);
             notification.defaults = Notification.DEFAULT_ALL;
             notification.flags |= Notification.FLAG_AUTO_CANCEL;
